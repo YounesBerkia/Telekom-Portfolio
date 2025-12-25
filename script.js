@@ -155,151 +155,10 @@ if (scrollArrow) {
 }
 
 /* ====== Chart Network (build lazily, but keep structure) ====== */
-(function buildNetwork() {
-    if (!hero) return;
-
-    const nodeConfigs = [
-        { x: 20, y: 13, scale: 0.9, bars: 6 }, { x: 80, y: 12, scale: 1.05, bars: 7 },
-        { x: 9, y: 45, scale: 0.9, bars: 5 }, { x: 92, y: 45, scale: 1.1, bars: 8 },
-        { x: 24, y: 78, scale: 0.8, bars: 5 }, { x: 76, y: 78, scale: 0.95, bars: 6 },
-        { x: 50, y: 6, scale: 0.6, bars: 4 }, { x: 50, y: 86, scale: 0.6, bars: 4 }
-    ];
-
-    const network = document.createElement('div');
-    network.className = 'chart-network';
-    network.id = 'chart-network';
-
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.classList.add('chart-net-lines');
-    svg.setAttribute('aria-hidden', 'true');
-
-    const nodes = [];
-    const lines = [];
-
-    nodeConfigs.forEach((cfg, idx) => {
-        const node = document.createElement('div');
-        node.className = 'chart-node';
-        node.dataset.id = String(idx);
-        node.style.left = cfg.x + '%';
-        node.style.top = cfg.y + '%';
-        node.style.transform = `translate(-50%, -50%) scale(${cfg.scale})`;
-        node.style.pointerEvents = 'auto';
-
-        const barsWrap = document.createElement('div');
-        barsWrap.className = 'chart-bars';
-        for (let i = 0; i < cfg.bars; i++) {
-            const item = document.createElement('div');
-            item.className = 'chart-item';
-            const bar = document.createElement('div');
-            bar.className = 'chart-bar';
-            bar.dataset.i = String(i);
-            const label = document.createElement('div');
-            label.className = 'chart-label';
-            label.textContent = '·';
-            item.appendChild(bar);
-            item.appendChild(label);
-            barsWrap.appendChild(item);
-        }
-
-        node.appendChild(barsWrap);
-        network.appendChild(node);
-        nodes.push({ el: node, cfg, vx: 0, vy: 0, snapBack: false, dragging: false, offset: (Math.random()*0.6 - 0.3) });
-    });
-
-    hero.appendChild(svg);
-    hero.appendChild(network);
-
-    function makeLine(aIdx, bIdx) {
-        const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        l.setAttribute('stroke-linecap', 'round');
-        svg.appendChild(l);
-        lines.push({ el: l, a: aIdx, b: bIdx });
-    }
-
-    for (let i = 0; i < nodes.length; i++) makeLine(i, (i+1) % nodes.length);
-    for (let i = 0; i < nodes.length; i++) makeLine(i, (i + 3) % nodes.length);
-
-    // attach to window for other code
-    window.__chartNetwork = { nodes, lines, svg, container: network };
-
-    // minimal dragging handlers (kept but efficient)
-    let dragging = null;
-    const maxRadius = 40;
-    function onPointerDown(e) {
-        if (e.button !== undefined && e.button !== 0) return;
-        const nodeEl = e.currentTarget;
-        const id = Number(nodeEl.dataset.id);
-        if (Number.isNaN(id)) return;
-        const rect = nodeEl.getBoundingClientRect();
-        const anchorX = rect.left + rect.width / 2;
-        const anchorY = rect.top + rect.height / 2;
-        const startX = e.clientX;
-        const startY = e.clientY;
-        dragging = { id, node: window.__chartNetwork.nodes[id], anchorX, anchorY, startX, startY };
-        dragging.node.dragging = true;
-        nodeEl.classList.add('dragging');
-        e.preventDefault();
-    }
-    function onPointerMove(e) {
-        if (!dragging) return;
-        const { id, node, startX, startY } = dragging;
-        const dx = e.clientX - startX, dy = e.clientY - startY;
-        const dist = Math.hypot(dx, dy);
-        const angle = Math.atan2(dy, dx);
-        const clamped = Math.min(maxRadius, dist);
-        const tx = Math.cos(angle) * clamped;
-        const ty = Math.sin(angle) * clamped;
-        node.vx = tx;
-        node.vy = ty;
-        // emphasize connected lines cheaply
-        window.__chartNetwork.lines.forEach(l => {
-            if (l.a === id || l.b === id) {
-                l.el.style.strokeWidth = '2.0';
-                l.el.style.opacity = '1';
-            }
-        });
-    }
-    function onPointerUp() {
-        if (!dragging) return;
-        const { id, node } = dragging;
-        node.el.classList.remove('dragging');
-        node.dragging = false;
-        node.snapBack = true;
-        window.__chartNetwork.lines.forEach(l => {
-            if (l.a === id || l.b === id) {
-                l.el.style.strokeWidth = '';
-                l.el.style.opacity = '';
-            }
-        });
-        dragging = null;
-    }
-
-    // wire per-node start listeners
-    nodes.forEach(({ el }, idx) => {
-        el.addEventListener('mousedown', onPointerDown);
-        el.addEventListener('touchstart', (ev) => {
-            const t = ev.touches[0];
-            onPointerDown({ currentTarget: el, clientX: t.clientX, clientY: t.clientY, button: 0, preventDefault: () => ev.preventDefault() });
-        }, { passive: false });
-    });
-    window.addEventListener('mousemove', onPointerMove);
-    window.addEventListener('mouseup', onPointerUp);
-    window.addEventListener('touchmove', (ev) => {
-        if (!dragging) return;
-        const t = ev.touches[0];
-        onPointerMove({ clientX: t.clientX, clientY: t.clientY });
-    }, { passive: false });
-    window.addEventListener('touchend', onPointerUp);
-})();
+/* Removed: Chart network functionality */
 
 /* ====== chart bars animation state (light-weight) ====== */
-const chartItems = Array.from(document.querySelectorAll('.chart-item'));
-const chartBars = chartItems.map(item => item.querySelector('.chart-bar'));
-const chartLabels = chartItems.map(item => item.querySelector('.chart-label'));
-const barState = chartBars.map(() => ({ current: 1, target: 1, offset: Math.random()*0.6 - 0.3 }));
-
-const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-function randomChar() { return charset.charAt(Math.floor(Math.random() * charset.length)); }
+/* Removed: Chart bars animation */
 
 /* ====== Starfield: lazy init when overlay opens ====== */
 let stars = [];
@@ -413,110 +272,10 @@ let lastHeavyTS = 0;
 const HEAVY_INTERVAL = 120; // do heavy layout reads at most every 120ms
 let lastFrameTS = 0;
 
-function updateBarTargetsIfNeeded() {
-    // only update occasionally; reduce frequency if reduced-motion
-    const chance = reduceMotion ? 0.02 : 0.08;
-    if (Math.random() < chance || mouseSpeed > 0.25) {
-        const speedFactor = Math.min(2.0, mouseSpeed * 1.8);
-        for (let i = 0; i < chartBars.length; i++) {
-            const rand = (Math.random() * 0.9 + 0.6);
-            const stagger = 0.6 + (i % 5) * 0.06;
-            const variance = 0.36 * rand * stagger;
-            const target = 1.0 + (speedFactor * variance) + barState[i].offset * 0.35;
-            barState[i].target = Math.max(0.25, target);
-            if (chartLabels[i]) {
-                const prob = Math.min(0.95, 0.06 + Math.abs(mouseSpeed) * 0.5 + Math.random()*0.15);
-                if (Math.random() < prob) chartLabels[i].textContent = randomChar();
-            }
-        }
-    }
-}
+/* Removed: updateBarTargetsIfNeeded function */
 
 function mainLoop(ts) {
-    // aim to keep overall work light; allow frame time checks if needed
-    // light updates every frame:
-    for (let i = 0; i < chartBars.length; i++) {
-        const s = barState[i];
-        const lerp = reduceMotion ? 0.08 : 0.12;
-        s.current += (s.target - s.current) * lerp;
-        const scale = Math.max(0.18, s.current);
-        chartBars[i].style.transform = `scaleY(${scale})`;
-        chartBars[i].style.opacity = (0.5 + Math.min(0.9, scale * 0.45)).toString();
-        const item = chartItems[i];
-        if (item) {
-            if (scale > 1.08) item.classList.add('active'); else item.classList.remove('active');
-        }
-    }
-
-    // heavy updates (layout reads + line updates + node shove) throttled
-    if (!lastHeavyTS || (ts - lastHeavyTS) >= HEAVY_INTERVAL) {
-        lastHeavyTS = ts;
-        updateBarTargetsIfNeeded();
-
-        const net = window.__chartNetwork;
-        if (net) {
-            const { nodes, lines, svg } = net;
-            // cache svg rect once
-            const svgRect = svg.getBoundingClientRect();
-
-            // update nodes: push away from mouse (cheap approx)
-            const mx = mouseX, my = mouseY;
-            for (let n = 0; n < nodes.length; n++) {
-                const node = nodes[n];
-                const el = node.el;
-                const rect = el.getBoundingClientRect(); // done in heavy tick only
-                const cx = rect.left + rect.width / 2;
-                const cy = rect.top + rect.height / 2;
-                const dx = cx - mx, dy = cy - my;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                const radius = Math.max(80, Math.min(220, 160));
-                const maxPush = 10;
-                let push = 0;
-                if (dist < radius) {
-                    const pct = (radius - dist) / radius;
-                    const speedEffect = Math.min(2.0, 1 + (mouseSpeed * 3));
-                    push = pct * maxPush * speedEffect * 0.65;
-                }
-                const tx = dist > 0 ? (dx / dist) * push : 0;
-                const ty = dist > 0 ? (dy / dist) * push : 0;
-
-                if (node.snapBack) {
-                    node.vx += (0 - node.vx) * 0.32;
-                    node.vy += (0 - node.vy) * 0.32;
-                    if (Math.abs(node.vx) < 0.6 && Math.abs(node.vy) < 0.6) {
-                        node.vx = 0; node.vy = 0; node.snapBack = false;
-                    }
-                } else if (!node.dragging) {
-                    node.vx += (tx - node.vx) * 0.22;
-                    node.vy += (ty - node.vy) * 0.22;
-                }
-                const baseScale = node.cfg && node.cfg.scale ? node.cfg.scale : 1;
-                // set transform directly (cheap)
-                el.style.transform = `translate(-50%, -50%) translate(${node.vx.toFixed(1)}px, ${node.vy.toFixed(1)}px) scale(${baseScale})`;
-
-                if (Math.abs(node.vx) > 2 || Math.abs(node.vy) > 2) el.classList.add('active'); else el.classList.remove('active');
-            }
-
-            // update SVG lines positions (heavy but throttled)
-            for (let ln of lines) {
-                const a = nodes[ln.a].el.getBoundingClientRect();
-                const b = nodes[ln.b].el.getBoundingClientRect();
-                const ax = a.left + a.width/2 - svgRect.left;
-                const ay = a.top + a.height/2 - svgRect.top;
-                const bx = b.left + b.width/2 - svgRect.left;
-                const by = b.top + b.height/2 - svgRect.top;
-                ln.el.setAttribute('x1', String(ax));
-                ln.el.setAttribute('y1', String(ay));
-                ln.el.setAttribute('x2', String(bx));
-                ln.el.setAttribute('y2', String(by));
-                const activeA = Math.abs(nodes[ln.a].vx) > 1 || Math.abs(nodes[ln.a].vy) > 1;
-                const activeB = Math.abs(nodes[ln.b].vx) > 1 || Math.abs(nodes[ln.b].vy) > 1;
-                ln.el.style.strokeWidth = (activeA || activeB) ? '1.9' : '1.2';
-                ln.el.style.opacity = (activeA || activeB) ? '0.95' : '0.75';
-            }
-        }
-    }
-
+    // No chart animations to update
     lastFrameTS = ts;
     requestAnimationFrame(mainLoop);
 }
@@ -562,14 +321,7 @@ document.addEventListener('visibilitychange', () => {
     // wrap mainLoop so heavy updates skip when hero not visible (and reduce frame pressure)
     const wrapper = (ts) => {
         if (!heroVisible && !reduceMotion) {
-            // still run lightweight bar interpolation occasionally but skip layout reads
-            for (let i = 0; i < chartBars.length; i++) {
-                const s = barState[i];
-                s.current += (s.target - s.current) * 0.06;
-                const scale = Math.max(0.18, s.current);
-                chartBars[i].style.transform = `scaleY(${scale})`;
-                chartBars[i].style.opacity = (0.5 + Math.min(0.9, scale * 0.45)).toString();
-            }
+            // No chart animations to update when not visible
             // schedule next tick at a lower priority (throttle)
             setTimeout(() => requestAnimationFrame(wrapper), 160);
             return;
